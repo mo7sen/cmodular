@@ -3,11 +3,15 @@
 void modulesystem_init(modulesystem_t *modulesystem)
 {
   vec_init(&modulesystem->modules);
+  vec_init(&modulesystem->categories);
+  vec_init(&modulesystem->module_names);
 }
 
 void modulesystem_deinit(modulesystem_t *modulesystem)
 {
   vec_deinit(&modulesystem->modules);
+  vec_deinit(&modulesystem->categories);
+  vec_deinit(&modulesystem->module_names);
 }
 
 bool modulesystem_hasmodule(modulesystem_t *modulesystem, const string_t modulename)
@@ -63,4 +67,18 @@ void modulesystem_addmodule(modulesystem_t *modulesystem, module_t module)
   {
     vec_push(&modulesystem->categories, categoryname);
   }
+}
+
+module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t query)
+{
+  for(int i = 0; i < modulesystem->modules.length; ++i)
+  {
+    module_t *iter = modulesystem->modules.data + i;
+    if(module_hascategory(iter, query) || !strcmp(iter->metadata.name, query))
+    {
+      return iter;
+    }
+  }
+
+  return NULL;
 }

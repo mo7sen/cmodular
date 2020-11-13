@@ -37,4 +37,4 @@ base = executable(
   dependencies: [ cmodules_dep ]
 )
 
-test('main', base)
+# test('main', base)

@@ -1,68 +1,38 @@
+#include "module.h"
 #include <stdio.h>
 #include <stdint.h>
-
-typedef enum
-{
-  RENDERING,
-  PHYSICS,
-
-  CATEGORY_COUNT,
-} CategoriesList;
-
-typedef uint32_t CategoryType;
-
-typedef struct
-{
-  void (*init)();
-  void (*deinit)();
-} vtable;
-
-typedef struct
-{
-  void (*draw)();
-} rendering_vtable;
-
-typedef struct
-{
-  void (*step)();
-} physics_vtable;
-
-typedef struct
-{
-  CategoryType type;
-  vtable *vt;
-} Category;
-
-typedef struct
-{
-  const char *name;
-
-  uint8_t categoryCount;
-  uint8_t categoryIdx[CATEGORY_COUNT];
-
-  Category categories;
-
-} Metadata;
-
-typedef struct
-{
-  Metadata meta;
-} Module;
-
-#define CREATE_MODULE(modulename) \
-  Module modulename = { \
-    .meta = { \
-      .name = #modulename, \
-    } \
-  }; \
-
-#define MODULE_HAS_CATEGORY(modulename, category)
+#include <modulesystem.h>
 
 int main()
 {
-  CREATE_MODULE(evol_renderer);
+  modulesystem_t modulesystem;
+  modulesystem_init(&modulesystem);
 
-  printf("evol_renderer.meta.name = %s\n", evol_renderer.meta.name);
+  module_t evol_renderer = module_create("evol_renderer");
+  module_addcategory(&evol_renderer, "evol");
+  module_addcategory(&evol_renderer, "renderer");
 
+  module_t evol_physics = module_create("evol_physics");
+  module_addcategory(&evol_physics, "physics");
+
+  modulesystem_addmodule(&modulesystem, evol_renderer);
+  modulesystem_addmodule(&modulesystem, evol_physics);
+
+  char *modulename;
+  int idx;
+  vec_foreach(&modulesystem.module_names, modulename, idx)
+  {
+    printf("module #%d: name = %s\n", idx, modulename);
+  }
+
+  module_t *found = modulesystem_getmodule(&modulesystem, "renderer");
+  if(found)
+  {
+    printf("found.categories.length = %d\n", found->metadata.categories.length);
+  }
+
+  module_destroy(evol_renderer);
+  module_destroy(evol_physics);
+  modulesystem_deinit(&modulesystem);
   return 0;
 }

@@ -27,7 +27,10 @@ typedef struct module
 } module_t;
 
 module_t module_create(const string_t name);
-uint32_t module_addcategory();
+void module_destroy(module_t module);
+void module_addcategory(module_t *module, const string_t category_name);
+
+bool module_hascategory(module_t *module, const string_t category_name);
 
 typedef vec_t(module_t) vec_module_t;
 
