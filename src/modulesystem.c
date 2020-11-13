@@ -1,4 +1,5 @@
 #include <modulesystem.h>
+#include <assert.h>
 
 void modulesystem_init(modulesystem_t *modulesystem)
 {
@@ -51,10 +52,10 @@ void modulesystem_addmodule(modulesystem_t *modulesystem, module_t module)
   }
 
   // check for category collision
-  string_t categoryname;
-  vec_foreach(&module.metadata.categories, categoryname, idx)
+  modulecategory_t category;
+  vec_foreach(&module.categories, category, idx)
   {
-    if(modulesystem_hascategory(modulesystem, categoryname))
+    if(modulesystem_hascategory(modulesystem, category.name))
     {
       assert(!"Category name collision");
     }
@@ -63,9 +64,9 @@ void modulesystem_addmodule(modulesystem_t *modulesystem, module_t module)
   vec_push(&modulesystem->modules, module);
 
   vec_push(&modulesystem->module_names, module.metadata.name);
-  vec_foreach(&module.metadata.categories, categoryname, idx)
+  vec_foreach(&module.categories, category, idx)
   {
-    vec_push(&modulesystem->categories, categoryname);
+    vec_push(&modulesystem->categories, category.name);
   }
 }
 
@@ -77,6 +78,21 @@ module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t qu
     if(module_hascategory(iter, query) || !strcmp(iter->metadata.name, query))
     {
       return iter;
+    }
+  }
+
+  return NULL;
+}
+
+void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t query)
+{
+  for(int i = 0; i < modulesystem->modules.length; ++i)
+  {
+    module_t *iter = modulesystem->modules.data + i;
+    int result = module_getcategoryidx(iter, query);
+    if(result != -1)
+    {
+      return iter->categories.data[result].vtable;
     }
   }
 

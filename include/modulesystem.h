@@ -19,6 +19,7 @@ bool modulesystem_hascategory(modulesystem_t *modulesystem, const string_t categ
 void modulesystem_addmodule(modulesystem_t *modulesystem, module_t module);
 
 module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t query);
+void  *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t query);
 
 
 #endif

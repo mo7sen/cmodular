@@ -5,3 +5,5 @@
 subprojects/*
 !subprojects/packagefiles
 !*.wrap
+
+tags
