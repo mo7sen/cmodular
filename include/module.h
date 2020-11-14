@@ -33,6 +33,8 @@ module_t module_create(const string_t name);
 void module_destroy(module_t module);
 
 void module_addcategory(module_t *module, modulecategory_t *category);
+void module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency);
+
 modulecategory_t *module_getcategory(module_t *module, const string_t category_name);
 void *module_getinterface(module_t *module, const string_t interface_name);
 #define module_hascategory(module, name) (bool)module_getcategory(module, name);

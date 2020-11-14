@@ -64,3 +64,14 @@ uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1)
   return hashmap_murmur(module->metadata.name, strlen(module->metadata.name), seed0, seed1);
 }
 
+void module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency)
+{
+  if(moduledependency)
+  {
+    vec_push(&module->metadata.module_dependencies, dependency_name);
+  }
+  else
+  {
+    vec_push(&module->metadata.category_dependencies, dependency_name);
+  }
+}

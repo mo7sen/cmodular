@@ -20,4 +20,11 @@
     .vtable = interface \
   })
 
+#define MODULE_ADDDEPENDENCY_MODULE(module, dependencyname) \
+  module_adddependency(module, dependencyname, true);
+
+#define MODULE_ADDDEPENDENCY_CATEGORY(module, dependencyname) \
+  module_adddependency(module, dependencyname, false);
+
+
 #endif
