@@ -1,9 +1,17 @@
+#include "interface.h"
 #include <stdio.h>
 #include <stdint.h>
 
 #include <cmodular.h>
-#include "ev_interfaces.h"
 
+INTERFACE_NEW 
+(
+  AdditionInterface, 
+  {
+    PROTOTYPE(add, uint32_t, (uint32_t, uint32_t))
+    PROTOTYPE(sub, uint32_t, (uint32_t, uint32_t))
+  }
+)
 
 uint32_t test_add(uint32_t a, uint32_t b)
 {
@@ -13,14 +21,6 @@ uint32_t test_sub(uint32_t a, uint32_t b)
 {
   return a - b;
 }
-uint32_t test_mul(uint32_t a, uint32_t b)
-{
-  return a * b;
-}
-uint32_t test_div(uint32_t a, uint32_t b)
-{
-  return a / b;
-}
 
 int main()
 {
@@ -29,47 +29,34 @@ int main()
   modulesystem_init(&modulesystem);
 
   // Create a new module
-  MODULE_NEW(addition_module);
+  MODULE_NEW(AdditionModule);
 
   // Create an AdditionInterfaceInstance from the AdditionInterface
-  INTERFACE_IMPL(AdditionInterface, AdditionInterfaceInstance);
+  INTERFACE_IMPL(AdditionInterface, additionInterfaceInstance);
   // Bind the test_add function to the interface's add function
-  INTERFACE_BIND(AdditionInterfaceInstance, add, test_add);
-  INTERFACE_BIND(AdditionInterfaceInstance, sub, test_sub);
+  INTERFACE_BIND(additionInterfaceInstance, add, test_add);
+  INTERFACE_BIND(additionInterfaceInstance, sub, test_sub);
 
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  MODULE_ADDCATEGORY(MODULE(addition_module), "addition", &AdditionInterfaceInstance);
+  MODULE_ADDCATEGORY(MODULE(AdditionModule), "addition", &additionInterfaceInstance);
 
-  MODULE_NEW(multiplication_module);
-  INTERFACE_IMPL(MultiplicationInterface, MultiplicationInterfaceInstance);
-  INTERFACE_BIND(MultiplicationInterfaceInstance, mul, test_mul);
-  INTERFACE_BIND(MultiplicationInterfaceInstance, div, test_div);
-  MODULE_ADDCATEGORY(MODULE(multiplication_module), "multiplication", &MultiplicationInterfaceInstance);
 
-  modulesystem_addmodule(&modulesystem, MODULE(addition_module));
-  modulesystem_addmodule(&modulesystem, MODULE(multiplication_module));
+  modulesystem_addmodule(&modulesystem, MODULE(AdditionModule));
 
   // Retrieve interface instances from the modulesystem
-  INTERFACE(AdditionInterface) *addition_interface             = modulesystem_getinterface(&modulesystem, "addition");
-  INTERFACE(MultiplicationInterface) *multiplication_interface = modulesystem_getinterface(&modulesystem, "multiplication");
+  module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
+  INTERFACE(AdditionInterface) *adder = module_getinterface(adderModule, "addition");
 
   uint32_t num1 = 10, num2 = 2;
-  if(addition_interface)
+  if(adder)
   {
-    printf("Addition of %d and %d results in %d\n", num1, num2, addition_interface->add(num1, num2));
-    printf("Subtraction of %d from %d results in %d\n", num2, num1, addition_interface->sub(num1, num2));
-  }
-
-  if(multiplication_interface)
-  {
-    printf("Multiplication of %d and %d results in %d\n", num1, num2, multiplication_interface->mul(num1, num2));
-    printf("Dividing of %d by %d results in %d\n", num1, num2, multiplication_interface->div(num1, num2));
+    printf("Addition of %d and %d results in %d\n", num1, num2, adder->add(num1, num2));
+    printf("Subtraction of %d from %d results in %d\n", num2, num1, adder->sub(num1, num2));
   }
 
   // Destroy modules
-  MODULE_DEL(addition_module);
-  MODULE_DEL(multiplication_module);
+  MODULE_DEL(AdditionModule);
   // Deinitialize the modulesystem
   modulesystem_deinit(&modulesystem);
   return 0;

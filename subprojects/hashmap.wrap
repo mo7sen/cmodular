@@ -1,0 +1,7 @@
+[wrap-git]
+directory = hashmap
+url = https://github.com/tidwall/hashmap.c
+revision = master
+depth = 1
+
+patch_directory = hashmap

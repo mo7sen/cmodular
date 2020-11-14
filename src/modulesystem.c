@@ -1,99 +1,91 @@
+#include "hashmap.h"
+#include "module.h"
 #include <modulesystem.h>
 #include <assert.h>
 
 void modulesystem_init(modulesystem_t *modulesystem)
 {
-  vec_init(&modulesystem->modules);
-  vec_init(&modulesystem->categories);
-  vec_init(&modulesystem->module_names);
+  modulesystem->modules    = hashmap_new(sizeof(module_t), 0, 0, 0, module_hash, module_cmp, NULL);
+  modulesystem->categories = hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
 }
 
 void modulesystem_deinit(modulesystem_t *modulesystem)
 {
-  vec_deinit(&modulesystem->modules);
-  vec_deinit(&modulesystem->categories);
-  vec_deinit(&modulesystem->module_names);
+  hashmap_free(modulesystem->modules);
+  hashmap_free(modulesystem->categories);
 }
 
 bool modulesystem_hasmodule(modulesystem_t *modulesystem, const string_t modulename)
 {
-  string_t name_iter;
-  int32_t idx;
-  vec_foreach(&modulesystem->module_names, name_iter, idx)
-  {
-    if(!strcmp(name_iter, modulename))
-      return true;
-  }
-  return false;
+  return hashmap_get(modulesystem->modules, &(module_t) {.metadata.name = modulename});
 }
 
 bool modulesystem_hascategory(modulesystem_t *modulesystem, const string_t categoryname)
 {
-  string_t name_iter;
-  int32_t idx;
-  vec_foreach(&modulesystem->categories, name_iter, idx)
-  {
-    if(!strcmp(name_iter, categoryname))
-      return true;
-  }
-  return false;
+  return hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
 }
 
-void modulesystem_addmodule(modulesystem_t *modulesystem, module_t module)
+void modulesystem_addmodule(modulesystem_t *modulesystem, module_t *module)
 {
   string_t depname;
   int32_t idx;
-  vec_foreach(&module.metadata.dependencies, depname, idx)
+  vec_foreach(&module->metadata.category_dependencies, depname, idx)
   {
-    if(!(modulesystem_hasmodule(modulesystem, depname) || modulesystem_hascategory(modulesystem, depname)))
+    if(!modulesystem_hascategory(modulesystem, depname))
     {
-      assert(!"Dependency not met");
+      assert(!"CategoryDependency not met");
+    }
+  }
+  vec_foreach(&module->metadata.module_dependencies, depname, idx)
+  {
+    if(!modulesystem_hasmodule(modulesystem, depname))
+    {
+      assert(!"ModuleDependency not met");
     }
   }
 
-  // check for category collision
-  modulecategory_t category;
-  vec_foreach(&module.categories, category, idx)
-  {
-    if(modulesystem_hascategory(modulesystem, category.name))
-    {
-      assert(!"Category name collision");
-    }
-  }
-
-  vec_push(&modulesystem->modules, module);
-
-  vec_push(&modulesystem->module_names, module.metadata.name);
-  vec_foreach(&module.categories, category, idx)
-  {
-    vec_push(&modulesystem->categories, category.name);
-  }
+  hashmap_set(modulesystem->modules, module);
 }
 
-module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t query)
+module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t modulename)
 {
-  for(int i = 0; i < modulesystem->modules.length; ++i)
-  {
-    module_t *iter = modulesystem->modules.data + i;
-    if(module_hascategory(iter, query) || !strcmp(iter->metadata.name, query))
-    {
-      return iter;
-    }
-  }
-
-  return NULL;
+  return hashmap_get(modulesystem->modules, &(module_t) {.metadata.name = modulename});
 }
 
-void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t query)
+typedef struct
 {
-  for(int i = 0; i < modulesystem->modules.length; ++i)
+  modulesystem_t *modulesystem;
+  const string_t categoryname;
+} query_t;
+
+bool get_category_from_modules(const void *module, void *query)
+{
+  modulecategory_t *category = module_getcategory((module_t*)module, ((query_t*)query)->categoryname);
+  if(category)
   {
-    module_t *iter = modulesystem->modules.data + i;
-    int result = module_getcategoryidx(iter, query);
-    if(result != -1)
-    {
-      return iter->categories.data[result].vtable;
-    }
+    hashmap_set(((query_t*)query)->modulesystem->categories, category);
+  }
+  return !category;
+}
+
+void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t categoryname)
+{
+  modulecategory_t *category;
+  category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
+  if(category && category->vtable)
+  {
+    return category->vtable;
+  }
+
+  bool miss = hashmap_scan(modulesystem->modules, get_category_from_modules,
+      &(query_t){.modulesystem = modulesystem, .categoryname = categoryname});
+  if(!miss)
+  {
+    category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
+  }
+  if(category && category->vtable)
+  {
+    return category->vtable;
   }
 
   return NULL;

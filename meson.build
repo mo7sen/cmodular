@@ -12,9 +12,11 @@ cmodular_inc = [
 ]
 
 vec_dep = dependency('vec')
+hashmap_dep = dependency('hashmap')
 
 cmodular_deps = [
   vec_dep,
+  hashmap_dep,
 ]
 
 cmodular_lib = library (
