@@ -1,4 +1,3 @@
-#include "interface.h"
 #include <stdio.h>
 #include <stdint.h>
 
@@ -24,9 +23,9 @@ uint32_t test_sub(uint32_t a, uint32_t b)
 
 int main()
 {
-  modulesystem_t modulesystem;
   // Initialize the modulesystem
-  modulesystem_init(&modulesystem);
+  modulesystem_t modulesystem;
+  MODULESYSTEM_INIT(modulesystem);
 
   // Create a new module
   MODULE_NEW(AdditionModule);
@@ -39,14 +38,14 @@ int main()
 
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  MODULE_ADDCATEGORY(MODULE(AdditionModule), "addition", &additionInterfaceInstance);
+  MODULE_ADDCATEGORY(AdditionModule, "addition", &additionInterfaceInstance);
 
 
-  modulesystem_addmodule(&modulesystem, MODULE(AdditionModule));
+  MODULESYSTEM_ADDMODULE(modulesystem, AdditionModule);
 
   // Retrieve interface instances from the modulesystem
-  module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
-  INTERFACE(AdditionInterface) *adder = module_getinterface(adderModule, "addition");
+  module_t *adderModule = MODULESYSTEM_GETMODULE(modulesystem, AdditionModule);
+  INTERFACE(AdditionInterface) *adder = MODULE_GETINTERFACE(adderModule, "addition");
 
   uint32_t num1 = 10, num2 = 2;
   if(adder)
@@ -58,6 +57,6 @@ int main()
   // Destroy modules
   MODULE_DEL(AdditionModule);
   // Deinitialize the modulesystem
-  modulesystem_deinit(&modulesystem);
+  MODULESYSTEM_DEINIT(modulesystem);
   return 0;
 }

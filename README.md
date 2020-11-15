@@ -5,10 +5,13 @@ This library is highly unstable. Use at your own risk.
 
 ### List of known problems:
 - `INTERFACE_IMPL()` doesn't heap allocate (dangling pointers in modules)
+- `MODULE_NEW()` heap allocates which may cause a memory leak as the modules
+  are copied when added to the modulesystem
 - No way to remove a module from the modulesystem
-- The API is (very) inconsistent.
+- The API is vague in what variables should be added in a macro call.
 - Adding modules in wrong order (violating dependencies) triggers an assert.
 - There are no unit tests. The tests directory contains the example used in here
+- No error codes (and in turn no error handling)
 
 ## Overview
 
@@ -61,7 +64,7 @@ INTERFACE_BIND(additionInterfaceInstance, sub, sub_fn);
 
 Module creation/destruction:
 ```c
-MODULE_NEW(AdditionModule); // Creates a module that can be referenced by MODULE(AdditionModule)
+MODULE_NEW(AdditionModule);
 MODULE_ADDCATEGORY(MODULE(AdditionModule), "addition", &additionInterfaceInstance);
 MODULE_DEL(AdditionModule);
 ```
@@ -70,9 +73,9 @@ Modulesystem:
 ```c
 modulesystem_t modulesystem;
 
-modulesystem_init(&modulesystem);
+MODULESYSTEM_INIT(modulesystem);
 
-modulesystem_addmodule(&modulesystem, MODULE(AdditionModule));
+MODULESYSTEM_ADDMODULE(modulesystem, AdditionModule);
 
 ```
 
@@ -81,21 +84,20 @@ Retrieving an interface from the modulesystem:
 // Works well if there's only one module that implements this interface. If the
 // interface is implemented by multiple modules, then there are no guarantees on
 // which one will be returned.
-INTERFACE(AdditionInterface) *adder = modulesystem_getinterface(&modulesystem, "addition");
+INTERFACE(AdditionInterface) *adder = MODULESYSTEM_GETINTERFACE(modulesystem, "addition");
 ```
 
 ```c
 // The following approach, while slower, is more reliable if the name of the
 // implementing module is known.
-module_t *module = modulesystem_getmodule(&modulesystem, "AdditionModule");
-INTERFACE(AdditionInterface) *adder = module_getinterface(module, "adddition");
+module_t *module = MODULESYSTEM_GETMODULE(modulesystem, "AdditionModule");
+INTERFACE(AdditionInterface) *adder = MODULE_GETINTERFACE(module, "adddition");
 ```
 It is highly recommended to cache the interfaces that will be reused as the search
 process can be a bottleneck in the speed of repetitive tasks.
 
 *Putting it all together:*
 ```c
-#include "interface.h"
 #include <stdio.h>
 #include <stdint.h>
 
@@ -121,9 +123,9 @@ uint32_t test_sub(uint32_t a, uint32_t b)
 
 int main()
 {
-  modulesystem_t modulesystem;
   // Initialize the modulesystem
-  modulesystem_init(&modulesystem);
+  modulesystem_t modulesystem;
+  MODULESYSTEM_INIT(modulesystem);
 
   // Create a new module
   MODULE_NEW(AdditionModule);
@@ -136,14 +138,14 @@ int main()
 
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  MODULE_ADDCATEGORY(MODULE(AdditionModule), "addition", &additionInterfaceInstance);
+  MODULE_ADDCATEGORY(AdditionModule, "addition", &additionInterfaceInstance);
 
 
-  modulesystem_addmodule(&modulesystem, MODULE(AdditionModule));
+  MODULESYSTEM_ADDMODULE(modulesystem, AdditionModule);
 
   // Retrieve interface instances from the modulesystem
-  module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
-  INTERFACE(AdditionInterface) *adder = module_getinterface(adderModule, "addition");
+  module_t *adderModule = MODULESYSTEM_GETMODULE(modulesystem, AdditionModule);
+  INTERFACE(AdditionInterface) *adder = MODULE_GETINTERFACE(adderModule, "addition");
 
   uint32_t num1 = 10, num2 = 2;
   if(adder)
@@ -155,7 +157,7 @@ int main()
   // Destroy modules
   MODULE_DEL(AdditionModule);
   // Deinitialize the modulesystem
-  modulesystem_deinit(&modulesystem);
+  MODULESYSTEM_DEINIT(modulesystem);
   return 0;
 }
 ```
@@ -170,4 +172,4 @@ Subtraction of 2 from 10 results in 8
 - [ ] Write tests
 - [ ] Set up CI
 - [ ] Add error codes to operations
-- [x] Design an ~~intuitive~~ API (I'm bad at *intuitive* stuff, any contribution to the API is appreciated)
+- [x] Design an ~~intuitive~~ API
