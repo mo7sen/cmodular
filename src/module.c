@@ -2,13 +2,13 @@
 #include <stdint.h>
 #include <hashmap.h>
 
-module_t *module_create(const string_t name)
+module_t module_create(const string_t name)
 {
-  module_t *result = malloc(sizeof(module_t));
-  result->metadata.name = name;
-  result->categories = hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
-  vec_init(&result->metadata.category_dependencies);
-  vec_init(&result->metadata.module_dependencies);
+  module_t result;
+  result.metadata.name = name;
+  result.categories = hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
+  vec_init(&result.metadata.category_dependencies);
+  vec_init(&result.metadata.module_dependencies);
 
   return result;
 }
@@ -16,8 +16,8 @@ module_t *module_create(const string_t name)
 void *module_getinterface(module_t *module, const string_t name)
 {
   modulecategory_t *category = module_getcategory(module, name);
-  if(category && category->vtable)
-    return category->vtable;
+  if(category && category->interface_instance)
+    return category->interface_instance;
   return NULL;
 }
 
@@ -26,12 +26,15 @@ void module_destroy(module_t *module)
   hashmap_free(module->categories);
   vec_deinit(&module->metadata.category_dependencies);
   vec_deinit(&module->metadata.module_dependencies);
-  free(module);
 }
 
-void module_addcategory(module_t *module, modulecategory_t *category)
+void module_addcategory(module_t *module, const string_t category_name, void *interface)
 {
-  hashmap_set(module->categories, category);
+  modulecategory_t category = (modulecategory_t) {
+    .name = category_name,
+    .interface_instance = interface,
+  };
+  hashmap_set(module->categories, &category);
 }
 
 modulecategory_t *module_getcategory(module_t *module, const string_t categoryname)

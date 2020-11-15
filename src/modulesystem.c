@@ -72,9 +72,9 @@ void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t cat
 {
   modulecategory_t *category;
   category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
-  if(category && category->vtable)
+  if(category && category->interface_instance)
   {
-    return category->vtable;
+    return category->interface_instance;
   }
 
   bool miss = hashmap_scan(modulesystem->modules, get_category_from_modules,
@@ -83,9 +83,9 @@ void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t cat
   {
     category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
   }
-  if(category && category->vtable)
+  if(category && category->interface_instance)
   {
-    return category->vtable;
+    return category->interface_instance;
   }
 
   return NULL;

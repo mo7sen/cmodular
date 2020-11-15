@@ -11,7 +11,6 @@
     __VA_ARGS__ \
   INTERFACE(name);
 
-#define INTERFACE_IMPL(type, name) INTERFACE(type) name
 #define INTERFACE_BIND(name, fn_a, fn_b) name.fn_a = fn_b
 
 #endif
