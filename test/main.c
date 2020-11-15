@@ -23,12 +23,18 @@ uint32_t sub_fn(uint32_t a, uint32_t b)
 
 int main()
 {
+  int32_t result;
+
   // Initialize the modulesystem
   modulesystem_t modulesystem;
-  modulesystem_init(&modulesystem);
+  result = modulesystem_init(&modulesystem);
+  if(result) goto exit;
 
   // Create a new module
-  module_t AdditionModule = module_create("AdditionModule");
+  module_t AdditionModule;
+  result = module_create(&AdditionModule, "AdditionModule");
+  if(result) goto deinit_modulesystem;
+
 
   // Create an AdditionInterfaceInstance from the AdditionInterface
   INTERFACE(AdditionInterface) additionInstance;
@@ -38,9 +44,11 @@ int main()
 
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  module_addcategory(&AdditionModule, "addition", &additionInstance);
+  result = module_addcategory(&AdditionModule, "addition", &additionInstance);
+  if(result) {}
 
-  modulesystem_addmodule(&modulesystem, &AdditionModule);
+  result = modulesystem_addmodule(&modulesystem, &AdditionModule);
+  if(result) {}
 
   // Retrieve interface instances from the modulesystem
   module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
@@ -56,6 +64,8 @@ int main()
   // Destroy modules
   module_destroy(&AdditionModule);
   // Deinitialize the modulesystem
+deinit_modulesystem:
   modulesystem_deinit(&modulesystem);
-  return 0;
+exit:
+  return result;
 }

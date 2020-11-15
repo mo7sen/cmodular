@@ -7,7 +7,6 @@ This library is highly unstable. Use at your own risk.
 - No way to remove a module from the modulesystem
 - Adding modules in wrong order (violating dependencies) triggers an assert.
 - There are no unit tests. The tests directory contains the example used in here
-- No error codes (and in turn no error handling)
 
 ## Overview
 
@@ -60,7 +59,8 @@ INTERFACE_BIND(additionInstance, sub, sub_fn);
 
 Module creation/destruction:
 ```c
-module_t AdditionModule = module_create("AdditionModule");
+module_t AdditionModule;
+module_create(&AdditionModule, "AdditionModule");
 module_addcategory(&AdditionModule, "addition", &additionInstance);
 
 module_destroy(&AdditionModule);
@@ -119,12 +119,18 @@ uint32_t sub_fn(uint32_t a, uint32_t b)
 
 int main()
 {
+  int32_t result;
+
   // Initialize the modulesystem
   modulesystem_t modulesystem;
-  modulesystem_init(&modulesystem);
+  result = modulesystem_init(&modulesystem);
+  if(result) goto exit;
 
   // Create a new module
-  module_t AdditionModule = module_create("AdditionModule");
+  module_t AdditionModule;
+  result = module_create(&AdditionModule, "AdditionModule");
+  if(result) goto deinit_modulesystem;
+
 
   // Create an AdditionInterfaceInstance from the AdditionInterface
   INTERFACE(AdditionInterface) additionInstance;
@@ -134,9 +140,11 @@ int main()
 
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  module_addcategory(&AdditionModule, "addition", &additionInstance);
+  result = module_addcategory(&AdditionModule, "addition", &additionInstance);
+  if(result) {}
 
-  modulesystem_addmodule(&modulesystem, &AdditionModule);
+  result = modulesystem_addmodule(&modulesystem, &AdditionModule);
+  if(result) {}
 
   // Retrieve interface instances from the modulesystem
   module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
@@ -152,8 +160,10 @@ int main()
   // Destroy modules
   module_destroy(&AdditionModule);
   // Deinitialize the modulesystem
+deinit_modulesystem:
   modulesystem_deinit(&modulesystem);
-  return 0;
+exit:
+  return result;
 }
 ```
 Output:
@@ -171,10 +181,13 @@ Subtraction of 2 from 10 results in 8
 - Categories can be added to a module without implementing their interfaces. While
   this is mostly useless due to the inability to search for a module that has multiple
   categories, it might be useful when trying to delay the binding of the functions.
+- While there aren't specific error codes, functions that can fail return 0 on success
+  and otherwise on fail. *_get* functions don't follow this rule as they should return
+  a value and return 0 (NULL) on fail.
+- All known ways to fail are OOM (Out Of Memory) errors.
 
 ### TODO
 
 - [ ] Write tests
 - [ ] Set up CI
-- [ ] Add error codes to operations
 - [x] Design a consistent API

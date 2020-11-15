@@ -2,7 +2,6 @@
 #define CMODULES_MODULE_HEADER
 
 #include <vec.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <hashmap.h>
 
@@ -29,18 +28,18 @@ typedef struct module
 } module_t;
 typedef vec_t(module_t) vec_module_t;
 
-module_t module_create(const string_t name);
+int32_t module_create(module_t *module, const string_t name);
 void module_destroy(module_t *module);
 
-void module_addcategory(module_t *module, const string_t category_name, void *interface);
-void module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency);
+int32_t module_addcategory(module_t *module, const string_t category_name, void *interface);
+int32_t module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency);
 
 modulecategory_t *module_getcategory(module_t *module, const string_t category_name);
 void *module_getinterface(module_t *module, const string_t interface_name);
 #define module_hascategory(module, name) (bool)module_getcategory(module, name);
 
-int module_cmp(const void *mod1, const void *mod2, void *udata);
-int modulecategory_cmp(const void *cat1, const void *cat2, void *udata);
+int32_t module_cmp(const void *mod1, const void *mod2, void *udata);
+int32_t modulecategory_cmp(const void *cat1, const void *cat2, void *udata);
 
 uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1);
 uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);

@@ -1,16 +1,25 @@
 #include <module.h>
 #include <stdint.h>
 #include <hashmap.h>
+#include <stdio.h>
 
-module_t module_create(const string_t name)
+int32_t module_create(module_t *module, const string_t name)
 {
-  module_t result;
-  result.metadata.name = name;
-  result.categories = hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
-  vec_init(&result.metadata.category_dependencies);
-  vec_init(&result.metadata.module_dependencies);
+  struct hashmap *categories_map = 
+    hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
+  if(!categories_map)
+    goto failed_categoriesmap_creation;
 
-  return result;
+  module->metadata.name = name;
+  module->categories = categories_map;
+  vec_init(&module->metadata.category_dependencies);
+  vec_init(&module->metadata.module_dependencies);
+
+  return 0;
+
+failed_categoriesmap_creation:
+    fprintf(stderr, "Failed to allocate memory for module \"%s\"\n", name);
+    return 1;
 }
 
 void *module_getinterface(module_t *module, const string_t name)
@@ -24,17 +33,29 @@ void *module_getinterface(module_t *module, const string_t name)
 void module_destroy(module_t *module)
 {
   hashmap_free(module->categories);
+  module->categories = 0;
+
   vec_deinit(&module->metadata.category_dependencies);
   vec_deinit(&module->metadata.module_dependencies);
 }
 
-void module_addcategory(module_t *module, const string_t category_name, void *interface)
+int32_t module_addcategory(module_t *module, const string_t category_name, void *interface)
 {
   modulecategory_t category = (modulecategory_t) {
     .name = category_name,
     .interface_instance = interface,
   };
-  hashmap_set(module->categories, &category);
+  void *replaced_element = hashmap_set(module->categories, &category);
+
+  if(!replaced_element && hashmap_oom(module->categories))
+    goto failed_category_add;
+
+  return 0;
+
+failed_category_add:
+    fprintf(stderr, "Couldn't add category \"%s\" to module \"%s\": Out of Memory\n", 
+        category_name, module->metadata.name);
+    return 1;
 }
 
 modulecategory_t *module_getcategory(module_t *module, const string_t categoryname)
@@ -68,14 +89,23 @@ uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1)
   return hashmap_murmur(module->metadata.name, strlen(module->metadata.name), seed0, seed1);
 }
 
-void module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency)
+int32_t module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency)
 {
+  int32_t result;
   if(moduledependency)
   {
-    vec_push(&module->metadata.module_dependencies, dependency_name);
+    result = vec_push(&module->metadata.module_dependencies, dependency_name);
   }
   else
   {
-    vec_push(&module->metadata.category_dependencies, dependency_name);
+    result = vec_push(&module->metadata.category_dependencies, dependency_name);
   }
+
+  if(result)
+  {
+    fprintf(stderr, "Couldn't add %s dependency to module \"%s\": Out of Memory\n",
+        moduledependency?"module":"category", module->metadata.name);
+  }
+
+  return result;
 }
