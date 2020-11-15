@@ -168,6 +168,9 @@ Subtraction of 2 from 10 results in 8
 - The string passed to `module_create(...)` must be unique as the module is stored
   using the hash of this string. Having duplicate string identifiers will cause
   the older modules to be overwritten.
+- Categories can be added to a module without implementing their interfaces. While
+  this is mostly useless due to the inability to search for a module that has multiple
+  categories, it might be useful when trying to delay the binding of the functions.
 
 ### TODO
 
