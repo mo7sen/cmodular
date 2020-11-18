@@ -1,5 +1,3 @@
-#include "interface.h"
-#include "module.h"
 #include <stdio.h>
 #include <stdint.h>
 
@@ -44,29 +42,10 @@ int main()
   INTERFACE_BIND(additionInstance, add, add_fn);
   INTERFACE_BIND(additionInstance, sub, sub_fn);
 
-/* #define module_addinterface(module, interfacetype) \ */
-/*   do { \ */
-/*     INTERFACE(interfacetype) *interface = malloc(sizeof(INTERFACE(interfacetype))); \ */
-/*     module_addcategory(module, #interfacetype, interface); \ */
-/*   } while(0) */
-
-
-/* #define module_bindinterfacefn(module, interfacetype, interfacefn, boundfn) \ */
-/*   do { \ */
-/*   } while(0) */
-
-
-  INTERFACE(AdditionInterface) *interface = module_addinterface(&AdditionModule, AdditionInterface);
-  if(interface)
-  {
-    // Do something
-  }
-  /* module_bindinterfacefn(&AdditionModule, AdditionInterface, add, add_fn); */
-
   // The interface instance is attached to the module as an implementation to
   // all methods that should be implemented by "addition" modules
-  /* result = module_addcategory(&AdditionModule, "addition", &additionInstance); */
-  /* if(result) {} */
+  result = module_addcategory(&AdditionModule, "addition", &additionInstance);
+  if(result) {}
 
   result = modulesystem_addmodule(&modulesystem, &AdditionModule);
   if(result) {}

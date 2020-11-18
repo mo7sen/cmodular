@@ -1,5 +1,6 @@
 #ifndef CMODULES_INTERFACE_HEADER
 #define CMODULES_INTERFACE_HEADER
+#include <stdint.h>
 
 #define INTERFACE(name) name##_interface_t
 
@@ -12,5 +13,14 @@
   INTERFACE(name);
 
 #define INTERFACE_BIND(name, fn_a, fn_b) name.fn_a = fn_b
+
+INTERFACE_NEW
+(
+  Base,
+  {
+    PROTOTYPE(init,   uint32_t, (void))
+    PROTOTYPE(deinit, uint32_t, (void))
+  }
+)
 
 #endif

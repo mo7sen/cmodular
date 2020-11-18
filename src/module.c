@@ -1,6 +1,7 @@
 #include <module.h>
 #include <stdint.h>
 #include <hashmap.h>
+#include <interface.h>
 #include <stdio.h>
 
 int32_t module_create(module_t *module, const string_t name)
@@ -37,6 +38,20 @@ void module_destroy(module_t *module)
 
   vec_deinit(&module->metadata.category_dependencies);
   vec_deinit(&module->metadata.module_dependencies);
+}
+
+void *module_addinterface_impl(module_t *module, const string_t interface_name, uint32_t interface_size)
+{
+  void *interface_p = malloc(interface_size);
+  if(!interface_p)
+  {
+    fprintf(stderr, "Couldn't allocate memory for interface. OOM\n");
+    goto exit_fail;
+  }
+
+
+exit_fail:
+  return NULL;
 }
 
 int32_t module_addcategory(module_t *module, const string_t category_name, void *interface)
@@ -109,3 +124,4 @@ int32_t module_adddependency(module_t *module, const string_t dependency_name, b
 
   return result;
 }
+
