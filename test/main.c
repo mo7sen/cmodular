@@ -34,6 +34,7 @@ int main()
   // Destroy modules
   module_destroy(&MathModule);
   // Deinitialize the modulesystem
+  modulesystem_deinit(&modulesystem);
 }
 
 void testfn(modulesystem_t *modulesystem)
