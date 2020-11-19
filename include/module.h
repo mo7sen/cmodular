@@ -5,15 +5,17 @@
 #include <stdint.h>
 #include <hashmap.h>
 
+#define member_size_p(type, member) sizeof( *((type *)0)->member )
+
 typedef char * string_t;
 
-typedef struct moduleinterface
+// This is a base struct with the sole purpose of representing other categories
+// in functions
+typedef struct modulecategory
 {
-  string_t name;
+  const string_t name;
   void *interface_instance;
-} moduleinterface_t;
-
-typedef vec_t(moduleinterface_t) vec_interface_t;
+} modulecategory_t;
 
 typedef struct module_metadata
 {
@@ -32,22 +34,42 @@ typedef vec_t(module_t) vec_module_t;
 int32_t module_create(module_t *module, const string_t name);
 void module_destroy(module_t *module);
 
-void *module_addinterface_impl(module_t *module, const string_t interface_name, uint32_t interface_size);
-
-#define module_addinterface(module, interfacetype) \
-  module_addinterface_impl(module, #interfacetype, sizeof(INTERFACE(interfacetype)))
-
-int32_t module_addcategory(module_t *module, const string_t category_name, void *interface);
+int32_t module_addcategory_impl(module_t *module, const string_t category_name);
 int32_t module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency);
 
-modulecategory_t *module_getcategory(module_t *module, const string_t category_name);
-void *module_getinterface(module_t *module, const string_t interface_name);
-#define module_hascategory(module, name) (bool)module_getcategory(module, name);
+struct modulecategory *module_getcategory(module_t *module, const string_t category_name);
+#define module_hascategory(module_p, catname) (bool)module_getcategory(module_p, catname)
 
 int32_t module_cmp(const void *mod1, const void *mod2, void *udata);
 int32_t modulecategory_cmp(const void *cat1, const void *cat2, void *udata);
 
 uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1);
 uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);
+
+#define module_addcategory(module_p, categorytype) \
+  module_addcategory_impl(module_p, #categorytype)
+
+// If category not found, add it.
+#define module_bindfunction(module_p, categorytype, catfunc, bindfunc) \
+    do { \
+      CATEGORY(categorytype) *category = (CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype); \
+      if(!category) \
+      { \
+        module_addcategory(module_p, categorytype); \
+        category = (CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype); \
+      } \
+      if(!category->interface) \
+      { \
+        category->interface = calloc(1, member_size_p(CATEGORY(categorytype), interface)); \
+      } \
+      category->interface->catfunc = bindfunc; \
+    } while (0)
+
+
+  // BUG This function has zero null checks. It is not yet obvious whether checking
+  // for the category/interface's existence should be done by the application or
+  // the library.
+#define module_getfunction(module_p, categorytype, func) \
+    ((CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype))->interface->func
 
 #endif

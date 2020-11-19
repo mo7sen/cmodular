@@ -1,92 +1,54 @@
-#include "interface.h"
-#include "module.h"
 #include <stdio.h>
 #include <stdint.h>
 
 #include <cmodular.h>
+#include "cmod_categories.h"
 
-INTERFACE_NEW 
-(
-  AdditionInterface, 
-  {
-    PROTOTYPE(add, uint32_t, (uint32_t, uint32_t))
-    PROTOTYPE(sub, uint32_t, (uint32_t, uint32_t))
-  }
-)
+// Implementation
+uint32_t add_fn(uint32_t a, uint32_t b) { return a + b; }
+uint32_t sub_fn(uint32_t a, uint32_t b) { return a - b; }
+uint32_t mul_fn(uint32_t a, uint32_t b) { return a * b; }
+uint32_t div_fn(uint32_t a, uint32_t b) { return a / b; }
 
-uint32_t add_fn(uint32_t a, uint32_t b)
-{
-  return a + b;
-}
-uint32_t sub_fn(uint32_t a, uint32_t b)
-{
-  return a - b;
-}
+void testfn(modulesystem_t *modulesystem);
 
 int main()
 {
-  int32_t result;
-
   // Initialize the modulesystem
   modulesystem_t modulesystem;
-  result = modulesystem_init(&modulesystem);
-  if(result) goto exit;
+  modulesystem_init(&modulesystem);
 
   // Create a new module
-  module_t AdditionModule;
-  result = module_create(&AdditionModule, "AdditionModule");
-  if(result) goto deinit_modulesystem;
+  module_t MathModule;
+  module_create(&MathModule, "MathModule");
 
+  module_bindfunction(&MathModule, MathCategory, add, add_fn);
+  module_bindfunction(&MathModule, MathCategory, sub, sub_fn);
+  module_bindfunction(&MathModule, MathCategory, mul, mul_fn);
+  module_bindfunction(&MathModule, MathCategory, div, div_fn);
 
-  // Create an AdditionInterfaceInstance from the AdditionInterface
-  INTERFACE(AdditionInterface) additionInstance;
-  // Bind the test_add function to the interface's add function
-  INTERFACE_BIND(additionInstance, add, add_fn);
-  INTERFACE_BIND(additionInstance, sub, sub_fn);
+  modulesystem_addmodule(&modulesystem, &MathModule);
 
-/* #define module_addinterface(module, interfacetype) \ */
-/*   do { \ */
-/*     INTERFACE(interfacetype) *interface = malloc(sizeof(INTERFACE(interfacetype))); \ */
-/*     module_addcategory(module, #interfacetype, interface); \ */
-/*   } while(0) */
-
-
-/* #define module_bindinterfacefn(module, interfacetype, interfacefn, boundfn) \ */
-/*   do { \ */
-/*   } while(0) */
-
-
-  INTERFACE(AdditionInterface) *interface = module_addinterface(&AdditionModule, AdditionInterface);
-  if(interface)
-  {
-    // Do something
-  }
-  /* module_bindinterfacefn(&AdditionModule, AdditionInterface, add, add_fn); */
-
-  // The interface instance is attached to the module as an implementation to
-  // all methods that should be implemented by "addition" modules
-  /* result = module_addcategory(&AdditionModule, "addition", &additionInstance); */
-  /* if(result) {} */
-
-  result = modulesystem_addmodule(&modulesystem, &AdditionModule);
-  if(result) {}
-
-  // Retrieve interface instances from the modulesystem
-  module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
-  INTERFACE(AdditionInterface) *adder = module_getinterface(adderModule, "addition");
-
-  uint32_t num1 = 10, num2 = 2;
-  if(adder)
-  {
-    printf("Addition of %d and %d results in %d\n", num1, num2, adder->add(num1, num2));
-    printf("Subtraction of %d from %d results in %d\n", num2, num1, adder->sub(num1, num2));
-  }
+  testfn(&modulesystem);
 
   // Destroy modules
-  module_destroy(&AdditionModule);
+  module_destroy(&MathModule);
   // Deinitialize the modulesystem
-deinit_modulesystem:
-  modulesystem_deinit(&modulesystem);
-exit:
-  return result;
+}
+
+void testfn(modulesystem_t *modulesystem)
+{
+  module_t *MathModule = modulesystem_getmodule(modulesystem, "MathModule");
+
+  // module_getfunction(...) returns NULL if function not found
+  uint32_t (*addfn)() = module_getfunction(MathModule, MathCategory, add);
+  uint32_t (*subfn)() = module_getfunction(MathModule, MathCategory, sub);
+  uint32_t (*mulfn)() = module_getfunction(MathModule, MathCategory, mul);
+  uint32_t (*divfn)() = module_getfunction(MathModule, MathCategory, div);
+
+  uint32_t num1 = 10, num2 = 2;
+  printf("Addition of %d and %d results in %d\n"      , num1, num2, addfn(num1, num2));
+  printf("Subtraction of %d from %d results in %d\n"  , num2, num1, subfn(num1, num2));
+  printf("Multiplication of %d and %d results in %d\n", num1, num2, mulfn(num1, num2));
+  printf("Division of %d by %d results in %d\n"       , num1, num2, divfn(num1, num2));
 }

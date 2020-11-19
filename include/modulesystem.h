@@ -18,8 +18,7 @@ int32_t modulesystem_addmodule(modulesystem_t *modulesystem, module_t *module);
 module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t query);
 #define modulesystem_hasmodule(system, module) modulesystem_getmodule(system, module)
 
-void  *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t query);
-#define modulesystem_hascategory(system, categoryname) modulesystem_getinterface(system, categoryname)
-
+module_t *modulesystem_getcategory(modulesystem_t *modulesystem, const string_t categoryname);
+bool modulesystem_hascategory(modulesystem_t *modulesystem, const string_t categoryname);
 
 #endif

@@ -4,22 +4,25 @@
 #include <stdio.h>
 #include <assert.h>
 
+int string_cmp(const void *cat1, const void *cat2, void *udata) { (void)udata; return strcmp(cat1, cat2); }
+uint64_t string_hash(const void *cat, uint64_t seed0, uint64_t seed1) { return hashmap_murmur(cat, strlen(cat), seed0, seed1); }
+
 int32_t modulesystem_init(modulesystem_t *modulesystem)
 {
   struct hashmap *system_modules;
   struct hashmap *system_categories;
-  system_modules = hashmap_new(sizeof(module_t), 0, 0, 0, module_hash, module_cmp, NULL);
 
+  system_modules = hashmap_new(sizeof(module_t), 0, 0, 0, module_hash, module_cmp, NULL);
   if(!system_modules)
     goto failedmods;
 
-  system_categories = hashmap_new(sizeof(modulecategory_t), 0, 0, 0,  modulecategory_hash, modulecategory_cmp, NULL);
-
+  system_categories = hashmap_new(sizeof(string_t), 0, 0, 0,  string_hash, string_cmp, NULL);
   if(!system_categories)
     goto failedcats;
 
   modulesystem->modules = system_modules;
   modulesystem->categories = system_categories;
+
   return 0;
 
 failedcats:
@@ -57,6 +60,11 @@ int32_t modulesystem_addmodule(modulesystem_t *modulesystem, module_t *module)
     }
   }
 
+  if(modulesystem_getmodule(modulesystem, module->metadata.name))
+  {
+    assert(!"Found module with the same name");
+  }
+
   void *replaced_element = hashmap_set(modulesystem->modules, module);
   if(!replaced_element && hashmap_oom(modulesystem->modules))
     goto failed_hashmap_set; // Out of memory
@@ -76,44 +84,33 @@ module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t mo
 
 typedef struct
 {
-  modulesystem_t *modulesystem;
   const string_t categoryname;
+  module_t *returnmodule;
 } query_t;
 
-bool get_category_from_modules(const void *module, void *p_query)
+bool get_module_with_category(const void *module, void *p_query)
 {
   query_t *query = p_query;
-  modulecategory_t *category = module_getcategory((module_t*)module, query->categoryname);
-  if(category)
+  if(module_hascategory((module_t*)module, query->categoryname))
   {
-    void *replaced_element = hashmap_set(query->modulesystem->categories, category);
-    if(!replaced_element && hashmap_oom(query->modulesystem->categories))
-    {
-      fprintf(stderr, "Found category \"%s\" in a module but couldn't load it"
-                      "into the modulesystem. Out of Memory\n", query->categoryname);
-    }
+    ((query_t*)p_query)->returnmodule = (module_t*)module;
+    return false;
   }
-  return !category;
+  return true;
 }
 
-void *modulesystem_getinterface(modulesystem_t *modulesystem, const string_t categoryname)
+bool modulesystem_hascategory(modulesystem_t *modulesystem, const string_t categoryname)
 {
-  modulecategory_t *category;
-  category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
-  if(category && category->interface_instance)
-  {
-    return category->interface_instance;
-  }
+  return hashmap_get(modulesystem->categories, categoryname);
+}
 
-  bool miss = hashmap_scan(modulesystem->modules, get_category_from_modules,
-      &(query_t){.modulesystem = modulesystem, .categoryname = categoryname});
-  if(!miss)
+module_t *modulesystem_getcategory(modulesystem_t *modulesystem, const string_t categoryname)
+{
+  query_t query = {.categoryname = categoryname};
+  bool found = !hashmap_scan(modulesystem->modules, get_module_with_category, &query);
+  if(found)
   {
-    category = hashmap_get(modulesystem->categories, &(modulecategory_t){.name = categoryname});
-  }
-  if(category && category->interface_instance)
-  {
-    return category->interface_instance;
+    return query.returnmodule;
   }
 
   return NULL;

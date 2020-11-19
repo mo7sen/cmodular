@@ -9,9 +9,9 @@ of the following:
 
 
 The modulesystem should be able to:
-  - Add modules
-  - Find modules by name
-  - Find modules by category
+  - [x] Add modules
+  - [x] Find modules by name
+  - [x] Find modules by category
 
 
 Modulesystem |-> Modules |-> Name
@@ -23,22 +23,25 @@ Modulesystem |-> Modules |-> Name
              |-> Cached Categories
 
 Notes:
-- A modulesystem can have an arbitrary number of modules
+- [x] A modulesystem can have an arbitrary number of modules
 - Cached categories are categories that the modulesystem was asked to
   get before
-- A module's name is a unique identifier that shouldn't be repeated in
+- [-] A module's name is a unique identifier that shouldn't be repeated in
   a modulesystem
-- Each module can have an arbitrary number of categories
-- A category contains a Name (unique) and an (optional) interface
-- A category's name can be used to find it.
-- An interface is a list of functions that the module implements and
+- [x] Each module can have an arbitrary number of categories
+- [x] A category contains a Name (unique) and an (optional) interface
+- [x] A category's name can be used to find it.
+- [x] An interface is a list of functions that the module implements and
   exposes via the category.
-- Each interface type should be bound to a category name. This is so
+
+- ~~Each interface type should be bound to a category name. This is so
   that an interface can only be added to specific categories
   **Example**: 
   * AdditionInterface tied to "addition" category.
   * An instance of AdditionInterface can be added to category "addition"
-  * Adding AdditionInterface to category "multiplication" results in an error
+  * Adding AdditionInterface to category "multiplication" results in an error~~
+  The above relation was fulfilled in the opposite direction. *Each category is
+  bound to a specific interface and can only implement its functions.*
 
 Behaviour:
 
@@ -73,8 +76,5 @@ Behaviour:
        is an error that **should** be detected
        2.1. Should the module have a reference to the modulesystem?
   - addcategory:
-    1. Adds a 
-    
 
-    
 
