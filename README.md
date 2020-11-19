@@ -30,40 +30,43 @@ First, interface creation:
 ```c
 INTERFACE_NEW
 (
-  AdditionInterface, // The name of the interface
+  MathInterface, // The name of the interface
   {
     // Functions that are implemented in the interface
     // Usage: PROTOTYPE(function name, return type, parameters taken)
     PROTOTYPE(add, uint32_t, (uint32_t, uint32_t))
     PROTOTYPE(sub, uint32_t, (uint32_t, uint32_t))
+    PROTOTYPE(mul, uint32_t, (uint32_t, uint32_t))
+    PROTOTYPE(div, uint32_t, (uint32_t, uint32_t))
   }
 )
 ```
 
-Interface instantiation (per module):
+Category creation and binding with interface:
 ```c
-uint32_t add_fn(uint32 a, uint32_t b)
-{
-  return a + b;
-}
-uint32_t sub_fn(uint32 a, uint32_t b)
-{
-  return a - b;
-}
-
-// Usage: INTERFACE_IMPL(interface type, instance name)
-INTERFACE(AdditionInterface) additionInstance;
-INTERFACE_BIND(additionInstance, add, add_fn);
-INTERFACE_BIND(additionInstance, sub, sub_fn);
+CATEGORY_DEFINE(MathCategory, MathInterface)
 ```
 
 Module creation/destruction:
 ```c
-module_t AdditionModule;
-module_create(&AdditionModule, "AdditionModule");
-module_addcategory(&AdditionModule, "addition", &additionInstance);
+module_t MathModule;
+module_create(&MathModule, "AdditionModule");
 
 module_destroy(&AdditionModule);
+```
+
+Binding functions:
+```c
+  uint32_t add_fn(uint32_t a, uint32_t b) { return a + b; }
+  uint32_t sub_fn(uint32_t a, uint32_t b) { return a - b; }
+  uint32_t mul_fn(uint32_t a, uint32_t b) { return a * b; }
+  uint32_t div_fn(uint32_t a, uint32_t b) { return a / b; }
+
+
+  module_bindfunction(&MathModule, MathCategory, add, add_fn);
+  module_bindfunction(&MathModule, MathCategory, sub, sub_fn);
+  module_bindfunction(&MathModule, MathCategory, mul, mul_fn);
+  module_bindfunction(&MathModule, MathCategory, div, div_fn);
 ```
 
 Modulesystem:
@@ -73,24 +76,25 @@ modulesystem_init(&modulesystem);
 
 modulesystem_addmodule(&modulesystem, &AdditionModule);
 
+modulesystem_deinit(&modulesystem);
 ```
 
-Retrieving an interface from the modulesystem:
+Retrieving a funciton from a module:
 ```c
-// Works well if there's only one module that implements this interface. If the
-// interface is implemented by multiple modules, then there are no guarantees on
-// which one will be returned.
-INTERFACE(AdditionInterface) *adder = modulesystem_getinterface(&modulesystem, "addition");
+// returntype (*fnname)() = module_getfunction(...)
+// NULL if function not found
+uint32_t (*addfn)() = module_getfunction(MathModule, MathCategory, add);
+uint32_t (*subfn)() = module_getfunction(MathModule, MathCategory, sub);
+uint32_t (*mulfn)() = module_getfunction(MathModule, MathCategory, mul);
+uint32_t (*divfn)() = module_getfunction(MathModule, MathCategory, div);
 ```
 
+Getting module by name/category from modulesystem:
 ```c
-// The following approach, while slower, is more reliable if the name of the
-// implementing module is known.
-module_t *module = modulesystem_getmodule(&modulesystem, "AdditionModule");
-INTERFACE(AdditionInterface) *adder = module_getinterface(module, "adddition");
+  module_t *MathModule = modulesystem_getmodule(modulesystem, "MathModule");
+  // OR
+  module_t *MathModule = modulesystem_getcategory(modulesystem, "MathCategory");
 ```
-It is highly recommended to cache the interfaces that will be reused as the search
-process can be a bottleneck in the speed of repetitive tasks.
 
 *Putting it all together:*
 ```c
@@ -98,89 +102,74 @@ process can be a bottleneck in the speed of repetitive tasks.
 #include <stdint.h>
 
 #include <cmodular.h>
+#include "cmod_categories.h"
 
-INTERFACE_NEW 
-(
-  AdditionInterface, 
-  {
-    PROTOTYPE(add, uint32_t, (uint32_t, uint32_t))
-    PROTOTYPE(sub, uint32_t, (uint32_t, uint32_t))
-  }
-)
+// Implementation
+uint32_t add_fn(uint32_t a, uint32_t b) { return a + b; }
+uint32_t sub_fn(uint32_t a, uint32_t b) { return a - b; }
+uint32_t mul_fn(uint32_t a, uint32_t b) { return a * b; }
+uint32_t div_fn(uint32_t a, uint32_t b) { return a / b; }
 
-uint32_t add_fn(uint32_t a, uint32_t b)
-{
-  return a + b;
-}
-uint32_t sub_fn(uint32_t a, uint32_t b)
-{
-  return a - b;
-}
+void testfn(modulesystem_t *modulesystem);
 
 int main()
 {
-  int32_t result;
-
   // Initialize the modulesystem
   modulesystem_t modulesystem;
-  result = modulesystem_init(&modulesystem);
-  if(result) goto exit;
+  modulesystem_init(&modulesystem);
 
   // Create a new module
-  module_t AdditionModule;
-  result = module_create(&AdditionModule, "AdditionModule");
-  if(result) goto deinit_modulesystem;
+  module_t MathModule;
+  module_create(&MathModule, "MathModule");
 
+  module_bindfunction(&MathModule, MathCategory, add, add_fn);
+  module_bindfunction(&MathModule, MathCategory, sub, sub_fn);
+  module_bindfunction(&MathModule, MathCategory, mul, mul_fn);
+  module_bindfunction(&MathModule, MathCategory, div, div_fn);
 
-  // Create an AdditionInterfaceInstance from the AdditionInterface
-  INTERFACE(AdditionInterface) additionInstance;
-  // Bind the test_add function to the interface's add function
-  INTERFACE_BIND(additionInstance, add, add_fn);
-  INTERFACE_BIND(additionInstance, sub, sub_fn);
+  modulesystem_addmodule(&modulesystem, &MathModule);
 
-  // The interface instance is attached to the module as an implementation to
-  // all methods that should be implemented by "addition" modules
-  result = module_addcategory(&AdditionModule, "addition", &additionInstance);
-  if(result) {}
-
-  result = modulesystem_addmodule(&modulesystem, &AdditionModule);
-  if(result) {}
-
-  // Retrieve interface instances from the modulesystem
-  module_t *adderModule = modulesystem_getmodule(&modulesystem, "AdditionModule");
-  INTERFACE(AdditionInterface) *adder = module_getinterface(adderModule, "addition");
-
-  uint32_t num1 = 10, num2 = 2;
-  if(adder)
-  {
-    printf("Addition of %d and %d results in %d\n", num1, num2, adder->add(num1, num2));
-    printf("Subtraction of %d from %d results in %d\n", num2, num1, adder->sub(num1, num2));
-  }
+  testfn(&modulesystem);
 
   // Destroy modules
-  module_destroy(&AdditionModule);
+  module_destroy(&MathModule);
   // Deinitialize the modulesystem
-deinit_modulesystem:
   modulesystem_deinit(&modulesystem);
-exit:
-  return result;
+}
+
+void testfn(modulesystem_t *modulesystem)
+{
+  module_t *MathModule = modulesystem_getmodule(modulesystem, "MathModule");
+
+  // module_getfunction(...) returns NULL if function not found
+  uint32_t (*addfn)() = module_getfunction(MathModule, MathCategory, add);
+  uint32_t (*subfn)() = module_getfunction(MathModule, MathCategory, sub);
+  uint32_t (*mulfn)() = module_getfunction(MathModule, MathCategory, mul);
+  uint32_t (*divfn)() = module_getfunction(MathModule, MathCategory, div);
+
+  uint32_t num1 = 10, num2 = 2;
+  printf("Addition of %d and %d results in %d\n"      , num1, num2, addfn(num1, num2));
+  printf("Subtraction of %d from %d results in %d\n"  , num2, num1, subfn(num1, num2));
+  printf("Multiplication of %d and %d results in %d\n", num1, num2, mulfn(num1, num2));
+  printf("Division of %d by %d results in %d\n"       , num1, num2, divfn(num1, num2));
 }
 ```
 Output:
 ```
 Addition of 10 and 2 results in 12
 Subtraction of 2 from 10 results in 8
+Multiplication of 10 and 2 results in 20
+Division of 10 by 2 results in 5
 ```
 
 ### Usage tips
-- `module_addcategory(...)` doesn't copy the interface. The application is responsible
-  for keeping the passed pointer valid.
 - The string passed to `module_create(...)` must be unique as the module is stored
   using the hash of this string. Having duplicate string identifiers will cause
   the older modules to be overwritten.
-- Categories can be added to a module without implementing their interfaces. While
-  this is mostly useless due to the inability to search for a module that has multiple
-  categories, it might be useful when trying to delay the binding of the functions.
+- Categories can be added to a module without implementing their functions using
+  `module_addcategory(&MathModule, MathCategory)`. While this is mostly useless 
+  due to the inability to search for a module that has multiple categories, it 
+  might be useful when trying to delay the binding of the functions.
 - While there aren't specific error codes, functions that can fail return 0 on success
   and otherwise on fail. *_get* functions don't follow this rule as they should return
   a value and return 0 (NULL) on fail.
@@ -190,4 +179,4 @@ Subtraction of 2 from 10 results in 8
 
 - [ ] Write tests
 - [ ] Set up CI
-- [x] Design a consistent API
+- [ ] Design a consistent API
