@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <hashmap.h>
 #include <interface.h>
-#include <stdio.h>
+#include <common.h>
 
 int32_t module_create(module_t *module, const string_t name)
 {
@@ -16,15 +16,24 @@ int32_t module_create(module_t *module, const string_t name)
   vec_init(&module->metadata.category_dependencies);
   vec_init(&module->metadata.module_dependencies);
 
-  return 0;
+  return CMOD_SUCCESS;
 
 failed_categoriesmap_creation:
-    fprintf(stderr, "Failed to allocate memory for module \"%s\"\n", name);
-    return 1;
+    cmod_err("Failed to allocate memory for module \"%s\"", name);
+    return CMOD_OOM;
+}
+
+bool destroy_category(const void *category, void *udata)
+{
+  (void)udata;
+  modulecategory_t *cat_p = (modulecategory_t*)category;
+  free(cat_p->interface_instance);
+  return true;
 }
 
 void module_destroy(module_t *module)
 {
+  hashmap_scan(module->categories, destroy_category, NULL);
   hashmap_free(module->categories);
   module->categories = 0;
 
@@ -43,12 +52,11 @@ int32_t module_addcategory_impl(module_t *module, const string_t category_name)
   if(!replaced_element && hashmap_oom(module->categories))
     goto failed_category_add;
 
-  return 0;
+  return CMOD_SUCCESS;
 
 failed_category_add:
-    fprintf(stderr, "Couldn't add category \"%s\" to module \"%s\": Out of Memory\n", 
-        category_name, module->metadata.name);
-    return 1;
+    cmod_err("Couldn't add category \"%s\" to module \"%s\": Out of Memory", category_name, module->metadata.name);
+    return CMOD_OOM;
 }
 
 modulecategory_t *module_getcategory(module_t *module, const string_t categoryname)
@@ -98,7 +106,7 @@ int32_t module_adddependency(module_t *module, const string_t dependency_name, b
 
   if(result)
   {
-    fprintf(stderr, "Couldn't add %s dependency to module \"%s\": Out of Memory\n",
+    cmod_err("Couldn't add %s dependency to module \"%s\": Out of Memory",
         moduledependency?"module":"category", module->metadata.name);
   }
 

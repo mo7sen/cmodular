@@ -31,9 +31,9 @@ int main()
 
   testfn(&modulesystem);
 
-  // Destroy modules
-  module_destroy(&MathModule);
   // Deinitialize the modulesystem
+  // N.B. modules are automatically destroyed when the modulesystem_deinit is
+  // called
   modulesystem_deinit(&modulesystem);
 }
 
