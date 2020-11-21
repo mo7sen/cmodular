@@ -214,13 +214,17 @@ void module_init_thr(void *data)
 
   pthread_mutex_unlock(&initData->systemData->stateMutex);
 
-  module_getfunction(initData->module, BaseCategory, init)();
+  uint32_t (*init) () = module_getfunction(initData->module, BaseCategory, init);
+  if(init) 
+  {
+    init();
 
-  hashmap_set(initData->systemData->initialized_modules, initData->module->metadata.name);
+    hashmap_set(initData->systemData->initialized_modules, initData->module->metadata.name);
+    hashmap_scan(initData->module->categories, module_init_category_iter, initData);
+    pthread_cond_broadcast(&initData->systemData->stateUpdateCond);
+  }
 
-  hashmap_scan(initData->module->categories, module_init_category_iter, initData);
-
-  pthread_cond_broadcast(&initData->systemData->stateUpdateCond);
+  free(data);
 }
 
 bool module_init_iter(const void *mod_p, void *udata)
@@ -231,11 +235,12 @@ bool module_init_iter(const void *mod_p, void *udata)
 
   if(module_hascategory(module, "BaseCategory"))
   {
-    ModuleInitData moduleData = (ModuleInitData) {
+    ModuleInitData *moduleData = malloc(sizeof(ModuleInitData));
+    *moduleData = (ModuleInitData) {
       .module = module,
       .systemData = systemData,
     };
-    ev_tpool_add_work(systemData->threadpool, module_init_thr, &moduleData);
+    ev_tpool_add_work(systemData->threadpool, module_init_thr, moduleData);
   }
 
   return true;

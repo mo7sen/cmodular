@@ -19,8 +19,29 @@ uint32_t mathmodule_deinit()
 
 uint32_t mathmodule_run() 
 {
-  for(int i = 0; i < 100; ++i)
+  for(int i = 0; i < 1000; ++i)
     printf("Mathmodule Run. i = %d\n", i);
+  return 0;
+}
+
+uint32_t renderingmodule_init()
+{
+  printf("renderingmodule, Init\n");
+  return 0;
+}
+
+uint32_t renderingmodule_deinit()
+{
+  printf("renderingmodule deinit\n");
+  return 0;
+}
+
+uint32_t renderingmodule_run()
+{
+  for(int i = 0; i < 1000; ++i)
+  {
+    printf("renderingmodule Run. i = %d\n", i);
+  }
   return 0;
 }
 
@@ -38,7 +59,7 @@ uint32_t physicsmodule_deinit()
 
 uint32_t physicsmodule_run()
 {
-  for(int i = 0; i < 100; ++i)
+  for(int i = 0; i < 1000; ++i)
   {
     printf("Physicsmodule Run. i = %d\n", i);
   }
@@ -54,12 +75,18 @@ int main()
   // Create a new module
   module_t MathModule;
   module_t PhysicsModule;
+  module_t RenderingModule;
   module_create(&MathModule, "MathModule");
   module_create(&PhysicsModule, "PhysicsModule");
+  module_create(&RenderingModule, "RenderingModule");
 
   module_bindfunction(&MathModule, BaseCategory, init, mathmodule_init);
   module_bindfunction(&MathModule, BaseCategory, run, mathmodule_run);
   module_bindfunction(&MathModule, BaseCategory, deinit, mathmodule_deinit);
+
+  module_bindfunction(&RenderingModule, BaseCategory, init,   renderingmodule_init);
+  module_bindfunction(&RenderingModule, BaseCategory, run,    renderingmodule_run);
+  module_bindfunction(&RenderingModule, BaseCategory, deinit, renderingmodule_deinit);
 
   module_bindfunction(&PhysicsModule, BaseCategory, init,   physicsmodule_init);
   module_bindfunction(&PhysicsModule, BaseCategory, run,    physicsmodule_run);
@@ -67,6 +94,7 @@ int main()
 
   modulesystem_addmodule(&modulesystem, &MathModule);
   modulesystem_addmodule(&modulesystem, &PhysicsModule);
+  modulesystem_addmodule(&modulesystem, &RenderingModule);
 
   modulesystem_start(&modulesystem);
 
