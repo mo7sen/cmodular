@@ -16,10 +16,11 @@
 
 INTERFACE_NEW
 (
-  Base,
+  BaseInterface,
   {
     PROTOTYPE(init,   uint32_t, (void))
     PROTOTYPE(deinit, uint32_t, (void))
+    PROTOTYPE(run, uint32_t, (void))
   }
 )
 

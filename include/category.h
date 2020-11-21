@@ -1,6 +1,7 @@
 #ifndef CMODULES_CATEGORY_HEADER
 #define CMODULES_CATEGORY_HEADER
-#include <stdint.h>
+#include <common.h>
+#include <interface.h>
 
 #define CATEGORY(catname) catname##_category_type
 
@@ -11,5 +12,6 @@
     INTERFACE(intname) *interface; \
   } CATEGORY(catname);
 
+CATEGORY_DEFINE(BaseCategory, BaseInterface)
 
 #endif

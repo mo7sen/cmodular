@@ -13,10 +13,12 @@ cmodular_inc = [
 
 vec_dep = dependency('vec')
 hashmap_dep = dependency('hashmap')
+thread_dep = dependency('evol_threads')
 
 cmodular_deps = [
   vec_dep,
   hashmap_dep,
+  thread_dep,
 ]
 
 cmodular_lib = library (

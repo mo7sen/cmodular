@@ -21,4 +21,6 @@ module_t *modulesystem_getmodule(modulesystem_t *modulesystem, const string_t qu
 module_t *modulesystem_getcategory(modulesystem_t *modulesystem, const string_t categoryname);
 bool modulesystem_hascategory(modulesystem_t *modulesystem, const string_t categoryname);
 
+int32_t modulesystem_start(modulesystem_t *modulesystem);
+
 #endif

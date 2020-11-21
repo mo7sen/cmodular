@@ -31,6 +31,8 @@ int main()
 
   testfn(&modulesystem);
 
+  modulesystem_start(&modulesystem);
+
   // Deinitialize the modulesystem
   // N.B. modules are automatically destroyed when the modulesystem_deinit is
   // called

@@ -4,10 +4,7 @@
 #include <vec.h>
 #include <stdint.h>
 #include <hashmap.h>
-
-#define member_size_p(type, member) sizeof( *((type *)0)->member )
-
-typedef char * string_t;
+#include <common.h>
 
 // This is a base struct with the sole purpose of representing other categories
 // in functions

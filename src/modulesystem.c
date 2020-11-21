@@ -1,7 +1,9 @@
 #include "hashmap.h"
 #include "module.h"
 #include <modulesystem.h>
+#include <category.h>
 #include <common.h>
+#include <evolpthreads.h>
 
 int string_cmp(const void *cat1, const void *cat2, void *udata) { (void)udata; return strcmp(cat1, cat2); }
 uint64_t string_hash(const void *cat, uint64_t seed0, uint64_t seed1) { return hashmap_murmur(cat, strlen(cat), seed0, seed1); }
@@ -129,4 +131,86 @@ module_t *modulesystem_getcategory(modulesystem_t *modulesystem, const string_t 
   }
 
   return NULL;
+}
+
+
+typedef struct
+{
+  modulesystem_t *modulesystem;
+  pthread_cond_t stateUpdateCond;
+  struct hashmap *initialized_modules;
+  struct hashmap *initialized_categories;
+} SystemInitData;
+
+typedef struct
+{
+  SystemInitData *systemData;
+  module_t *module;
+} ModuleInitData;
+
+void *module_start_thr(void *data)
+{
+  ModuleInitData *initData = (ModuleInitData *)data;
+
+  (void)initData;
+
+  return 0;
+}
+
+bool module_category_iter(const void *item, void *udata)
+{
+  return true;
+}
+
+bool module_start_iter(const void *mod_p, void *udata)
+{
+  SystemInitData *systemData = (SystemInitData *)udata;
+
+
+  module_t *module = (module_t *) mod_p;
+
+  if(module_hascategory(module, "BaseCategory"))
+  {
+    ModuleInitData moduleData = (ModuleInitData) {
+      .module = module,
+      .systemData = systemData,
+    };
+    module_getfunction(module, BaseCategory, init)();
+  }
+
+  return true;
+}
+
+int32_t modulesystem_start(modulesystem_t *modulesystem)
+{
+  int32_t result;
+  // Start modules in order so that dependencies are fulfilled
+  SystemInitData data = (SystemInitData) {
+    .modulesystem = modulesystem,
+  };
+  pthread_cond_init(&data.stateUpdateCond, NULL);
+  data.initialized_modules = hashmap_new(sizeof(char *), 0, 0, 0, string_hash, string_cmp, NULL);
+  data.initialized_categories = hashmap_new(sizeof(char *), 0, 0, 0, string_hash, string_cmp, NULL);
+
+
+  bool success = hashmap_scan(modulesystem->modules, module_start_iter, &data);
+  if(!success) goto start_error;
+
+
+  goto success;
+
+start_error:
+  result = CMOD_ERR_START;
+  goto exit;
+
+success:
+  result = 0;
+  goto exit;
+
+exit:
+  pthread_cond_destroy(&data.stateUpdateCond);
+  hashmap_free(data.initialized_modules);
+  hashmap_free(data.initialized_categories);
+
+  return result;
 }

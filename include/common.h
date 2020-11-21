@@ -8,13 +8,17 @@
 #define cmod_err(...)
 #endif
 
+#define member_size_p(type, member) sizeof( *((type *)0)->member )
+
+typedef char * string_t;
+
 enum CModErrorCodes
 {
   CMOD_SUCCESS,
   CMOD_OOM,
   CMOD_ERR_ADDMODULE_NAMECOLLISION,
   CMOD_ERR_ADDMODULE_DEPENDENCYNOTFOUND,
+  CMOD_ERR_START,
 };
-
 
 #endif
