@@ -3,7 +3,9 @@
 #include <modulesystem.h>
 #include <category.h>
 #include <common.h>
+#include <evolthreadpool.h>
 #include <evolpthreads.h>
+#include <pthread.h>
 
 int string_cmp(const void *cat1, const void *cat2, void *udata) { (void)udata; return strcmp(cat1, cat2); }
 uint64_t string_hash(const void *cat, uint64_t seed0, uint64_t seed1) { return hashmap_murmur(cat, strlen(cat), seed0, seed1); }
@@ -137,7 +139,9 @@ module_t *modulesystem_getcategory(modulesystem_t *modulesystem, const string_t 
 typedef struct
 {
   modulesystem_t *modulesystem;
+  ev_tpool_t *threadpool;
   pthread_cond_t stateUpdateCond;
+  pthread_mutex_t stateMutex;
   struct hashmap *initialized_modules;
   struct hashmap *initialized_categories;
 } SystemInitData;
@@ -148,24 +152,80 @@ typedef struct
   module_t *module;
 } ModuleInitData;
 
-void *module_start_thr(void *data)
+bool module_init_category_iter(const void *item, void *data)
 {
   ModuleInitData *initData = (ModuleInitData *)data;
+  modulecategory_t *category = (modulecategory_t *)item;
 
-  (void)initData;
+  hashmap_set(initData->systemData->initialized_categories, category->name);
+  hashmap_set(initData->systemData->modulesystem->categories, category->name);
 
-  return 0;
-}
-
-bool module_category_iter(const void *item, void *udata)
-{
   return true;
 }
 
-bool module_start_iter(const void *mod_p, void *udata)
+void module_init_thr(void *data)
+{
+  ModuleInitData *initData = (ModuleInitData *)data;
+
+  pthread_mutex_lock(&initData->systemData->stateMutex);
+
+  // Check for dependency
+  bool catDeps = false;
+  bool modDeps = false;
+  string_t depname = NULL;
+  int32_t idx = 0;
+  while(1)
+  {
+    if(!modDeps)
+    {
+      modDeps = true;
+      vec_foreach(&initData->module->metadata.module_dependencies, depname, idx)
+      {
+        if(!hashmap_get(initData->systemData->initialized_modules, depname))
+        {
+          modDeps = false;
+          break;
+        }
+      }
+    }
+
+    if(!catDeps)
+    {
+      catDeps = true;
+      vec_foreach(&initData->module->metadata.category_dependencies, depname, idx)
+      {
+        if(!hashmap_get(initData->systemData->initialized_categories, depname))
+        {
+          catDeps = false;
+          break;
+        }
+      }
+    }
+
+    if(!catDeps || !modDeps)
+    {
+      pthread_cond_wait(&initData->systemData->stateUpdateCond, &initData->systemData->stateMutex);
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  pthread_mutex_unlock(&initData->systemData->stateMutex);
+
+  module_getfunction(initData->module, BaseCategory, init)();
+
+  hashmap_set(initData->systemData->initialized_modules, initData->module->metadata.name);
+
+  hashmap_scan(initData->module->categories, module_init_category_iter, initData);
+
+  pthread_cond_broadcast(&initData->systemData->stateUpdateCond);
+}
+
+bool module_init_iter(const void *mod_p, void *udata)
 {
   SystemInitData *systemData = (SystemInitData *)udata;
-
 
   module_t *module = (module_t *) mod_p;
 
@@ -175,7 +235,35 @@ bool module_start_iter(const void *mod_p, void *udata)
       .module = module,
       .systemData = systemData,
     };
-    module_getfunction(module, BaseCategory, init)();
+    ev_tpool_add_work(systemData->threadpool, module_init_thr, &moduleData);
+  }
+
+  return true;
+}
+
+bool module_deinit_iter(const void *mod_p, void *udata)
+{
+  SystemInitData *systemData = (SystemInitData *)udata;
+
+  module_t *module = (module_t *) mod_p;
+
+  if(module_hascategory(module, "BaseCategory"))
+  {
+    ev_tpool_add_work(systemData->threadpool, (thread_func_t)module_getfunction(module, BaseCategory, deinit), NULL);
+  }
+
+  return true;
+}
+
+bool module_run_iter(const void *mod_p, void *udata)
+{
+  SystemInitData *systemData = (SystemInitData *)udata;
+
+  module_t *module = (module_t *) mod_p;
+
+  if(module_hascategory(module, "BaseCategory"))
+  {
+    ev_tpool_add_work(systemData->threadpool, (thread_func_t)module_getfunction(module, BaseCategory, run), NULL);
   }
 
   return true;
@@ -188,29 +276,50 @@ int32_t modulesystem_start(modulesystem_t *modulesystem)
   SystemInitData data = (SystemInitData) {
     .modulesystem = modulesystem,
   };
+
   pthread_cond_init(&data.stateUpdateCond, NULL);
+  pthread_mutex_init(&data.stateMutex, NULL);
   data.initialized_modules = hashmap_new(sizeof(char *), 0, 0, 0, string_hash, string_cmp, NULL);
   data.initialized_categories = hashmap_new(sizeof(char *), 0, 0, 0, string_hash, string_cmp, NULL);
+  data.threadpool = ev_tpool_create(0);
 
+  bool success = hashmap_scan(modulesystem->modules, module_init_iter, &data);
+  ev_tpool_wait(data.threadpool);
+  if(!success) goto init_error;
 
-  bool success = hashmap_scan(modulesystem->modules, module_start_iter, &data);
-  if(!success) goto start_error;
+  success = hashmap_scan(modulesystem->modules, module_run_iter, &data);
+  ev_tpool_wait(data.threadpool);
+  if(!success) goto run_error;
 
+  success = hashmap_scan(modulesystem->modules, module_deinit_iter, &data);
+  ev_tpool_wait(data.threadpool);
+  if(!success) goto deinit_error;
 
   goto success;
 
-start_error:
-  result = CMOD_ERR_START;
+init_error:
+  result = CMOD_ERR_INIT;
+  goto exit;
+
+run_error:
+  result = CMOD_ERR_RUN;
+  goto exit;
+
+deinit_error:
+  result = CMOD_ERR_DEINIT;
   goto exit;
 
 success:
-  result = 0;
+  result = CMOD_SUCCESS;
   goto exit;
 
 exit:
+
   pthread_cond_destroy(&data.stateUpdateCond);
+  pthread_mutex_destroy(&data.stateMutex);
   hashmap_free(data.initialized_modules);
   hashmap_free(data.initialized_categories);
+  ev_tpool_destroy(data.threadpool);
 
   return result;
 }

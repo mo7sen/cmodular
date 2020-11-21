@@ -41,11 +41,11 @@ void module_destroy(module_t *module)
   vec_deinit(&module->metadata.module_dependencies);
 }
 
-int32_t module_addcategory_impl(module_t *module, const string_t category_name)
+int32_t module_addcategory_impl(module_t *module, const string_t category_name, uint32_t interface_size)
 {
   modulecategory_t category = (modulecategory_t) {
     .name = category_name,
-    .interface_instance = NULL,
+    .interface_instance = calloc(1, interface_size),
   };
   void *replaced_element = hashmap_set(module->categories, &category);
 

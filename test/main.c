@@ -3,14 +3,47 @@
 
 #include <cmodular.h>
 #include "cmod_categories.h"
+#include "module.h"
 
-// Implementation
-uint32_t add_fn(uint32_t a, uint32_t b) { return a + b; }
-uint32_t sub_fn(uint32_t a, uint32_t b) { return a - b; }
-uint32_t mul_fn(uint32_t a, uint32_t b) { return a * b; }
-uint32_t div_fn(uint32_t a, uint32_t b) { return a / b; }
+uint32_t mathmodule_init() 
+{
+  printf("Mathmodule Init\n");
+  return 0;
+}
 
-void testfn(modulesystem_t *modulesystem);
+uint32_t mathmodule_deinit() 
+{
+  printf("Mathmodule deinit\n");
+  return 0;
+}
+
+uint32_t mathmodule_run() 
+{
+  for(int i = 0; i < 100; ++i)
+    printf("Mathmodule Run. i = %d\n", i);
+  return 0;
+}
+
+uint32_t physicsmodule_init()
+{
+  printf("Physicsmodule, Init\n");
+  return 0;
+}
+
+uint32_t physicsmodule_deinit()
+{
+  printf("Physicsmodule deinit\n");
+  return 0;
+}
+
+uint32_t physicsmodule_run()
+{
+  for(int i = 0; i < 100; ++i)
+  {
+    printf("Physicsmodule Run. i = %d\n", i);
+  }
+  return 0;
+}
 
 int main()
 {
@@ -20,16 +53,20 @@ int main()
 
   // Create a new module
   module_t MathModule;
+  module_t PhysicsModule;
   module_create(&MathModule, "MathModule");
+  module_create(&PhysicsModule, "PhysicsModule");
 
-  module_bindfunction(&MathModule, MathCategory, add, add_fn);
-  module_bindfunction(&MathModule, MathCategory, sub, sub_fn);
-  module_bindfunction(&MathModule, MathCategory, mul, mul_fn);
-  module_bindfunction(&MathModule, MathCategory, div, div_fn);
+  module_bindfunction(&MathModule, BaseCategory, init, mathmodule_init);
+  module_bindfunction(&MathModule, BaseCategory, run, mathmodule_run);
+  module_bindfunction(&MathModule, BaseCategory, deinit, mathmodule_deinit);
+
+  module_bindfunction(&PhysicsModule, BaseCategory, init,   physicsmodule_init);
+  module_bindfunction(&PhysicsModule, BaseCategory, run,    physicsmodule_run);
+  module_bindfunction(&PhysicsModule, BaseCategory, deinit, physicsmodule_deinit);
 
   modulesystem_addmodule(&modulesystem, &MathModule);
-
-  testfn(&modulesystem);
+  modulesystem_addmodule(&modulesystem, &PhysicsModule);
 
   modulesystem_start(&modulesystem);
 
@@ -37,21 +74,4 @@ int main()
   // N.B. modules are automatically destroyed when the modulesystem_deinit is
   // called
   modulesystem_deinit(&modulesystem);
-}
-
-void testfn(modulesystem_t *modulesystem)
-{
-  module_t *MathModule = modulesystem_getmodule(modulesystem, "MathModule");
-
-  // module_getfunction(...) returns NULL if function not found
-  uint32_t (*addfn)() = module_getfunction(MathModule, MathCategory, add);
-  uint32_t (*subfn)() = module_getfunction(MathModule, MathCategory, sub);
-  uint32_t (*mulfn)() = module_getfunction(MathModule, MathCategory, mul);
-  uint32_t (*divfn)() = module_getfunction(MathModule, MathCategory, div);
-
-  uint32_t num1 = 10, num2 = 2;
-  printf("Addition of %d and %d results in %d\n"      , num1, num2, addfn(num1, num2));
-  printf("Subtraction of %d from %d results in %d\n"  , num2, num1, subfn(num1, num2));
-  printf("Multiplication of %d and %d results in %d\n", num1, num2, mulfn(num1, num2));
-  printf("Division of %d by %d results in %d\n"       , num1, num2, divfn(num1, num2));
 }

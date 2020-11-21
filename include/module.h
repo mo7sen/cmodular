@@ -31,7 +31,7 @@ typedef vec_t(module_t) vec_module_t;
 int32_t module_create(module_t *module, const string_t name);
 void module_destroy(module_t *module);
 
-int32_t module_addcategory_impl(module_t *module, const string_t category_name);
+int32_t module_addcategory_impl(module_t *module, const string_t category_name, uint32_t interface_size);
 int32_t module_adddependency(module_t *module, const string_t dependency_name, bool moduledependency);
 
 struct modulecategory *module_getcategory(module_t *module, const string_t category_name);
@@ -44,7 +44,7 @@ uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1);
 uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);
 
 #define module_addcategory(module_p, categorytype) \
-  module_addcategory_impl(module_p, #categorytype)
+  module_addcategory_impl(module_p, #categorytype, member_size_p(CATEGORY(categorytype), interface))
 
 // If category not found, add it.
 #define module_bindfunction(module_p, categorytype, catfunc, bindfunc) \
