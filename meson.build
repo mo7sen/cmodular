@@ -35,10 +35,12 @@ cmodular_dep = declare_dependency(
   dependencies: cmodular_deps,
 )
 
+if meson.version().version_compare('>= 0.54.0')
+  meson.override_dependency('cmodular', cmodular_dep)
+endif
+
 base = executable(
   'main',
   'test/main.c',
   dependencies: [ cmodular_dep ]
 )
-
-# test('main', base)
