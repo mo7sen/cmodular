@@ -26,7 +26,7 @@ thread_dep = dependency('evol_threads')
 cmodular_deps = [
   vec_dep,
   hashmap_dep,
-  evol_thread_dep,
+  thread_dep,
 ]
 
 cmodular_lib = library (
