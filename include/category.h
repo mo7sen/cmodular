@@ -9,7 +9,7 @@
   typedef struct \
   { \
     string_t name; \
-    INTERFACE(intname) *interface; \
+    INTERFACE(intname) *vtable; \
   } CATEGORY(catname);
 
 CATEGORY_DEFINE(BaseCategory, BaseInterface)

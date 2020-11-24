@@ -44,7 +44,7 @@ uint64_t module_hash(const void *mod, uint64_t seed0, uint64_t seed1);
 uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);
 
 #define module_addcategory(module_p, categorytype) \
-  module_addcategory_impl(module_p, #categorytype, member_size_p(CATEGORY(categorytype), interface))
+  module_addcategory_impl(module_p, #categorytype, member_size_p(CATEGORY(categorytype), vtable))
 
 // If category not found, add it.
 #define module_bindfunction(module_p, categorytype, catfunc, bindfunc) \
@@ -55,11 +55,11 @@ uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);
         module_addcategory(module_p, categorytype); \
         category = (CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype); \
       } \
-      if(!category->interface) \
+      if(!category->vtable) \
       { \
-        category->interface = calloc(1, member_size_p(CATEGORY(categorytype), interface)); \
+        category->vtable = calloc(1, member_size_p(CATEGORY(categorytype), vtable)); \
       } \
-      category->interface->catfunc = bindfunc; \
+      category->vtable->catfunc = bindfunc; \
     } while (0)
 
 
@@ -67,6 +67,6 @@ uint64_t modulecategory_hash(const void *cat, uint64_t seed0, uint64_t seed1);
   // for the category/interface's existence should be done by the application or
   // the library.
 #define module_getfunction(module_p, categorytype, func) \
-    ((CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype))->interface->func
+    ((CATEGORY(categorytype)*)module_getcategory(module_p, #categorytype))->vtable->func
 
 #endif
