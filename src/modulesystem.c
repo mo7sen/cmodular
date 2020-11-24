@@ -5,7 +5,6 @@
 #include <common.h>
 #include <evolthreadpool.h>
 #include <evolpthreads.h>
-#include <pthread.h>
 
 int string_cmp(const void *cat1, const void *cat2, void *udata) { (void)udata; return strcmp(cat1, cat2); }
 uint64_t string_hash(const void *cat, uint64_t seed0, uint64_t seed1) { return hashmap_murmur(cat, strlen(cat), seed0, seed1); }
