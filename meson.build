@@ -1,6 +1,10 @@
 project('cmodular', 'c',
   version : '0.1',
-  default_options : ['warning_level=3'])
+  default_options : [
+    'warning_level=3',
+    'default_library=static',
+    'build_type=debug',
+  ])
 
 cmodular_src = [
   'src/module.c',
@@ -11,6 +15,10 @@ cmodular_inc = [
   'include',
 ]
 
+subproject('vec')
+subproject('hashmap')
+subproject('evol_threads')
+
 vec_dep = dependency('vec')
 hashmap_dep = dependency('hashmap')
 thread_dep = dependency('evol_threads')
@@ -18,7 +26,7 @@ thread_dep = dependency('evol_threads')
 cmodular_deps = [
   vec_dep,
   hashmap_dep,
-  thread_dep,
+  evol_thread_dep,
 ]
 
 cmodular_lib = library (
