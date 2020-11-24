@@ -1,6 +1,7 @@
 
 **/build/**
 **/.clangd/**
+**/.vs/**
 
 subprojects/*
 !subprojects/packagefiles
